@@ -1,16 +1,31 @@
-import React, { useState } from 'react';
-import { Plane, Truck, Calendar, Users, MapPin, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plane, Truck, Calendar, Users, MapPin, Package, Mail, Phone, User } from 'lucide-react';
+import { FullAirport, loadAirportsData } from '../data/airportsData';
+import AirportAutocomplete from '../components/AirportAutocomplete';
+import { 
+  sendTravelConfirmationEmail, 
+  sendTravelBookingNotification,
+  sendLogisticsConfirmationEmail,
+  sendLogisticsBookingNotification 
+} from '../services/emailService';
 
 const Booking = () => {
   const [activeTab, setActiveTab] = useState('travel');
+  const [airports, setAirports] = useState<FullAirport[]>([]);
+  const [isLoadingAirports, setIsLoadingAirports] = useState(true);
+  const [isSubmittingTravel, setIsSubmittingTravel] = useState(false);
+  const [isSubmittingLogistics, setIsSubmittingLogistics] = useState(false);
   const [travelForm, setTravelForm] = useState({
+    origin: '',
     destination: '',
     departure: '',
     return: '',
     travelers: '1',
-    travelType: '',
-    budget: '',
-    preferences: ''
+    class: '',
+    preferences: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: ''
   });
   const [logisticsForm, setLogisticsForm] = useState({
     origin: '',
@@ -21,8 +36,27 @@ const Booking = () => {
     value: '',
     shipping: '',
     urgency: '',
-    description: ''
+    description: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: ''
   });
+
+  // Load airports data on component mount
+  useEffect(() => {
+    const loadAirports = async () => {
+      try {
+        const airportsData = await loadAirportsData();
+        setAirports(airportsData);
+      } catch (error) {
+        console.error('Failed to load airports:', error);
+      } finally {
+        setIsLoadingAirports(false);
+      }
+    };
+    
+    loadAirports();
+  }, []);
 
   const handleTravelInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setTravelForm({
@@ -38,36 +72,78 @@ const Booking = () => {
     });
   };
 
-  const handleTravelSubmit = (e: React.FormEvent) => {
+  const handleTravelSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Travel booking submitted:', travelForm);
-    alert('Thank you for your travel booking request! We\'ll contact you within 2 hours with a customized itinerary and pricing.');
-    setTravelForm({
-      destination: '',
-      departure: '',
-      return: '',
-      travelers: '1',
-      travelType: '',
-      budget: '',
-      preferences: ''
-    });
+    setIsSubmittingTravel(true);
+    
+    try {
+      // Send confirmation email to customer
+      if (travelForm.customerEmail) {
+        await sendTravelConfirmationEmail(travelForm);
+      }
+      
+      // Send notification to admins
+      await sendTravelBookingNotification(travelForm);
+      
+      alert('Thank you for your travel booking request! We\'ve sent you a confirmation email and will contact you within 2 hours with a customized itinerary and pricing.');
+      
+      // Reset form
+      setTravelForm({
+        origin: '',
+        destination: '',
+        departure: '',
+        return: '',
+        travelers: '1',
+        class: '',
+        preferences: '',
+        customerName: '',
+        customerEmail: '',
+        customerPhone: ''
+      });
+    } catch (error) {
+      console.error('Error submitting travel booking:', error);
+      alert('There was an error submitting your booking request. Please try again or contact us directly.');
+    } finally {
+      setIsSubmittingTravel(false);
+    }
   };
 
-  const handleLogisticsSubmit = (e: React.FormEvent) => {
+  const handleLogisticsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Logistics quote submitted:', logisticsForm);
-    alert('Thank you for your logistics quote request! Our team will provide you with a detailed quote within 24 hours.');
-    setLogisticsForm({
-      origin: '',
-      destination: '',
-      cargoType: '',
-      weight: '',
-      dimensions: '',
-      value: '',
-      shipping: '',
-      urgency: '',
-      description: ''
-    });
+    setIsSubmittingLogistics(true);
+    
+    try {
+      // Send confirmation email to customer
+      if (logisticsForm.customerEmail) {
+        await sendLogisticsConfirmationEmail(logisticsForm);
+      }
+      
+      // Send notification to admins
+      await sendLogisticsBookingNotification(logisticsForm);
+      
+      alert('Thank you for your logistics quote request! We\'ve sent you a confirmation email and our team will provide you with a detailed quote within 24 hours.');
+      
+      // Reset form
+      setLogisticsForm({
+        origin: '',
+        destination: '',
+        cargoType: '',
+        weight: '',
+        dimensions: '',
+        value: '',
+        shipping: '',
+        urgency: '',
+        description: '',
+        customerName: '',
+        customerEmail: '',
+        customerPhone: ''
+      });
+    } catch (error) {
+      console.error('Error submitting logistics quote:', error);
+      alert('There was an error submitting your quote request. Please try again or contact us directly.');
+    } finally {
+      setIsSubmittingLogistics(false);
+    }
   };
 
   return (
@@ -129,40 +205,71 @@ const Booking = () => {
               <form onSubmit={handleTravelSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="destination" className="block text-sm font-medium text-gray-700 mb-2">
-                      <MapPin className="inline h-4 w-4 mr-1" />
-                      Destination *
-                    </label>
-                    <input
-                      type="text"
-                      id="destination"
-                      name="destination"
-                      required
-                      value={travelForm.destination}
-                      onChange={handleTravelInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="e.g., Tokyo, Japan"
-                    />
+                    {isLoadingAirports ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <MapPin className="inline h-4 w-4 mr-1" />
+                          Origin Airport *
+                        </label>
+                        <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                          Loading airports...
+                        </div>
+                      </div>
+                    ) : (
+                      <AirportAutocomplete
+                        id="origin"
+                        name="origin"
+                        label="Origin Airport"
+                        value={travelForm.origin}
+                        onChange={(value) => setTravelForm({ ...travelForm, origin: value })}
+                        airports={airports}
+                        placeholder="Search origin airport..."
+                        required
+                      />
+                    )}
                   </div>
                   <div>
-                    <label htmlFor="travelType" className="block text-sm font-medium text-gray-700 mb-2">
-                      Travel Type *
+                    {isLoadingAirports ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <MapPin className="inline h-4 w-4 mr-1" />
+                          Destination Airport *
+                        </label>
+                        <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                          Loading airports...
+                        </div>
+                      </div>
+                    ) : (
+                      <AirportAutocomplete
+                        id="destination"
+                        name="destination"
+                        label="Destination Airport"
+                        value={travelForm.destination}
+                        onChange={(value) => setTravelForm({ ...travelForm, destination: value })}
+                        airports={airports}
+                        placeholder="Search destination airport..."
+                        required
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="class" className="block text-sm font-medium text-gray-700 mb-2">
+                      <Plane className="inline h-4 w-4 mr-1" />
+                      Travel Class *
                     </label>
                     <select
-                      id="travelType"
-                      name="travelType"
+                      id="class"
+                      name="class"
                       required
-                      value={travelForm.travelType}
+                      value={travelForm.class}
                       onChange={handleTravelInputChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="">Select travel type</option>
-                      <option value="leisure">Leisure/Vacation</option>
-                      <option value="business">Business Travel</option>
-                      <option value="adventure">Adventure Tour</option>
-                      <option value="cultural">Cultural Experience</option>
-                      <option value="luxury">Luxury Travel</option>
-                      <option value="family">Family Trip</option>
+                      <option value="">Select travel class</option>
+                      <option value="economy">Economy Class</option>
+                      <option value="premium-economy">Premium Economy</option>
+                      <option value="business">Business Class</option>
+                      <option value="first">First Class</option>
                     </select>
                   </div>
                 </div>
@@ -217,24 +324,58 @@ const Booking = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-2">
-                    Budget Range (per person)
-                  </label>
-                  <select
-                    id="budget"
-                    name="budget"
-                    value={travelForm.budget}
-                    onChange={handleTravelInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select budget range</option>
-                    <option value="under-1000">Under $1,000</option>
-                    <option value="1000-2500">$1,000 - $2,500</option>
-                    <option value="2500-5000">$2,500 - $5,000</option>
-                    <option value="5000-10000">$5,000 - $10,000</option>
-                    <option value="over-10000">Over $10,000</option>
-                  </select>
+                {/* Customer Contact Information */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 mb-2">
+                        <User className="inline h-4 w-4 mr-1" />
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="customerName"
+                        name="customerName"
+                        required
+                        value={travelForm.customerName}
+                        onChange={handleTravelInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                        <Mail className="inline h-4 w-4 mr-1" />
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        id="customerEmail"
+                        name="customerEmail"
+                        required
+                        value={travelForm.customerEmail}
+                        onChange={handleTravelInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter your email address"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700 mb-2">
+                        <Phone className="inline h-4 w-4 mr-1" />
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        id="customerPhone"
+                        name="customerPhone"
+                        value={travelForm.customerPhone}
+                        onChange={handleTravelInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -254,10 +395,20 @@ const Booking = () => {
 
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center"
+                  disabled={isSubmittingTravel}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center"
                 >
-                  <Plane className="mr-2 h-5 w-5" />
-                  Request Travel Booking
+                  {isSubmittingTravel ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Plane className="mr-2 h-5 w-5" />
+                      Request Travel Booking
+                    </>
+                  )}
                 </button>
               </form>
             </div>
@@ -429,6 +580,60 @@ const Booking = () => {
                   </div>
                 </div>
 
+                {/* Customer Contact Information */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label htmlFor="logisticsCustomerName" className="block text-sm font-medium text-gray-700 mb-2">
+                        <User className="inline h-4 w-4 mr-1" />
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="logisticsCustomerName"
+                        name="customerName"
+                        required
+                        value={logisticsForm.customerName}
+                        onChange={handleLogisticsInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="logisticsCustomerEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                        <Mail className="inline h-4 w-4 mr-1" />
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        id="logisticsCustomerEmail"
+                        name="customerEmail"
+                        required
+                        value={logisticsForm.customerEmail}
+                        onChange={handleLogisticsInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        placeholder="Enter your email address"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="logisticsCustomerPhone" className="block text-sm font-medium text-gray-700 mb-2">
+                        <Phone className="inline h-4 w-4 mr-1" />
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        id="logisticsCustomerPhone"
+                        name="customerPhone"
+                        value={logisticsForm.customerPhone}
+                        onChange={handleLogisticsInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
                     Additional Details
@@ -446,10 +651,20 @@ const Booking = () => {
 
                 <button
                   type="submit"
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white px-6 py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center"
+                  disabled={isSubmittingLogistics}
+                  className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 disabled:cursor-not-allowed text-white px-6 py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center"
                 >
-                  <Truck className="mr-2 h-5 w-5" />
-                  Request Logistics Quote
+                  {isSubmittingLogistics ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="mr-2 h-5 w-5" />
+                      Request Logistics Quote
+                    </>
+                  )}
                 </button>
               </form>
             </div>

@@ -40,12 +40,12 @@ const Contact = () => {
     {
       icon: <Phone className="h-6 w-6 text-blue-600" />,
       title: 'Phone Numbers',
-      details: ['+1 (555) 123-4567', '+1 (555) 123-4568', 'Toll-free: 1-800-GLOBAL'],
+      details: ['+1 (555) 123-4567', '+1 (555) 123-4568', 'Toll-free: 1-800-NOMAD'],
     },
     {
       icon: <Mail className="h-6 w-6 text-blue-600" />,
       title: 'Email Addresses',
-      details: ['info@globalmove.com', 'support@globalmove.com', 'quotes@globalmove.com'],
+      details: ['info@nomadtravel.com', 'support@nomadtravel.com', 'quotes@nomadtravel.com'],
     },
     {
       icon: <Clock className="h-6 w-6 text-blue-600" />,
@@ -232,7 +232,7 @@ const Contact = () => {
                   </div>
                   <div className="flex items-center space-x-3">
                     <Mail className="h-5 w-5" />
-                    <span className="font-semibold">urgent@globalmove.com</span>
+                    <span className="font-semibold">urgent@nomadtravel.com</span>
                   </div>
                 </div>
               </div>

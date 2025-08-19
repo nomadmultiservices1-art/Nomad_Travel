@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Plane, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,8 +14,12 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <Plane className="h-8 w-8 text-blue-600" />
-              <span className="font-bold text-xl text-gray-900">GlobalMove</span>
+              <img 
+                src="https://suumltnbcytuleobutca.supabase.co/storage/v1/object/public/Elements/Blue%20Minimal%20Travel%20Business%20Logo.png" 
+                alt="Nomad Travel and Multiservices Logo" 
+                className="h-8 w-auto"
+              />
+              <span className="font-bold text-xl text-gray-900">Nomad Travel and multiservices</span>
             </Link>
           </div>
           
