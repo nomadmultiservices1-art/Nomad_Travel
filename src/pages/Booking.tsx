@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plane, Truck, Calendar, Users, MapPin, Package, Mail, Phone, User } from 'lucide-react';
-import { FullAirport, loadAirportsData, getImmediateAirports } from '../data/airportsData';
+import { FullAirport, loadAirportsData } from '../data/airportsData';
 import AirportAutocomplete from '../components/AirportAutocomplete';
 import { 
   sendTravelConfirmationEmail, 
@@ -13,8 +13,8 @@ const Booking = () => {
   const [activeTab, setActiveTab] = useState('travel');
   const [airports, setAirports] = useState<FullAirport[]>([]);
   const [isLoadingAirports, setIsLoadingAirports] = useState(true);
-  const [isLoadingFullDatabase, setIsLoadingFullDatabase] = useState(false);
   const [airportsCount, setAirportsCount] = useState(0);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isSubmittingTravel, setIsSubmittingTravel] = useState(false);
   const [isSubmittingLogistics, setIsSubmittingLogistics] = useState(false);
   const [travelForm, setTravelForm] = useState({
@@ -44,37 +44,21 @@ const Booking = () => {
     customerPhone: ''
   });
 
-  // Load airports data on component mount with progressive loading
+  // Load complete airports data on component mount
   useEffect(() => {
     const loadAirports = async () => {
       try {
-        // First, load immediate airports (essential + cached) for instant availability
-        const immediateAirports = getImmediateAirports();
-        setAirports(immediateAirports);
-        setAirportsCount(immediateAirports.length);
-        setIsLoadingAirports(false);
-        
-        // Show loading indicator for full database if we only have essential airports
-        if (immediateAirports.length <= 10) {
-          setIsLoadingFullDatabase(true);
-        }
-        
-        // Then load full dataset in background
-        const fullAirportsData = await loadAirportsData();
-        
-        // Update with full dataset if it's larger than immediate airports
-        if (fullAirportsData.length > immediateAirports.length) {
-          setAirports(fullAirportsData);
-          setAirportsCount(fullAirportsData.length);
-          console.log(`Upgraded to full airports database: ${fullAirportsData.length} airports`);
-        }
-        
-        setIsLoadingFullDatabase(false);
+        setLoadingError(null);
+        const airportsData = await loadAirportsData();
+        setAirports(airportsData);
+        setAirportsCount(airportsData.length);
+        console.log(`Loaded complete airports database: ${airportsData.length} airports`);
       } catch (error) {
         console.error('Failed to load airports:', error);
-        // Ensure we have at least essential airports
-        const fallbackAirports = getImmediateAirports();
-        setAirports(fallbackAirports);
+        setLoadingError('Failed to load airport data. Please refresh the page to try again.');
+        setAirports([]);
+        setAirportsCount(0);
+      } finally {
         setIsLoadingAirports(false);
       }
     };
@@ -223,15 +207,20 @@ const Booking = () => {
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-gray-900">Travel Booking Request</h2>
                   <p className="text-gray-600">Tell us about your dream destination and preferences</p>
-                  {isLoadingFullDatabase && (
+                  {isLoadingAirports && (
                     <div className="flex items-center mt-2 text-sm text-blue-600">
                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-2"></div>
-                      Loading full airport database... ({airportsCount} airports available)
+                      Loading airport database...
                     </div>
                   )}
-                  {!isLoadingFullDatabase && airportsCount > 0 && (
+                  {!isLoadingAirports && airportsCount > 0 && (
                     <div className="text-sm text-green-600 mt-2">
-                      ✓ {airportsCount.toLocaleString()} airports available
+                      ✓ {airportsCount.toLocaleString()} airports loaded
+                    </div>
+                  )}
+                  {loadingError && (
+                    <div className="text-sm text-red-600 mt-2">
+                      ⚠️ {loadingError}
                     </div>
                   )}
                 </div>

@@ -1,5 +1,8 @@
 // Full airport dataset processor from ourairports.com
 // Dataset: https://github.com/datasets/airport-codes
+// Now fetching from Supabase Storage
+
+import JSZip from 'jszip';
 
 export interface FullAirport {
   ident: string;
@@ -35,17 +38,7 @@ let airportsDatabase: FullAirport[] = [];
 let isLoading = false;
 let loadingPromise: Promise<FullAirport[]> | null = null;
 
-// Essential airports for immediate availability (major international hubs)
-const essentialAirports: FullAirport[] = [
-  { ident: 'KJFK', type: 'large_airport', name: 'John F Kennedy International Airport', elevation_ft: '13', continent: 'NA', iso_country: 'US', iso_region: 'US-NY', municipality: 'New York', scheduled_service: 'yes', gps_code: 'KJFK', iata_code: 'JFK', local_code: 'JFK', home_link: '', wikipedia_link: '', keywords: '' },
-  { ident: 'KLAX', type: 'large_airport', name: 'Los Angeles International Airport', elevation_ft: '125', continent: 'NA', iso_country: 'US', iso_region: 'US-CA', municipality: 'Los Angeles', scheduled_service: 'yes', gps_code: 'KLAX', iata_code: 'LAX', local_code: 'LAX', home_link: '', wikipedia_link: '', keywords: '' },
-  { ident: 'EGLL', type: 'large_airport', name: 'London Heathrow Airport', elevation_ft: '83', continent: 'EU', iso_country: 'GB', iso_region: 'GB-ENG', municipality: 'London', scheduled_service: 'yes', gps_code: 'EGLL', iata_code: 'LHR', local_code: '', home_link: '', wikipedia_link: '', keywords: '' },
-  { ident: 'LFPG', type: 'large_airport', name: 'Charles de Gaulle International Airport', elevation_ft: '392', continent: 'EU', iso_country: 'FR', iso_region: 'FR-IDF', municipality: 'Paris', scheduled_service: 'yes', gps_code: 'LFPG', iata_code: 'CDG', local_code: '', home_link: '', wikipedia_link: '', keywords: '' },
-  { ident: 'EDDF', type: 'large_airport', name: 'Frankfurt am Main Airport', elevation_ft: '364', continent: 'EU', iso_country: 'DE', iso_region: 'DE-HE', municipality: 'Frankfurt am Main', scheduled_service: 'yes', gps_code: 'EDDF', iata_code: 'FRA', local_code: '', home_link: '', wikipedia_link: '', keywords: '' },
-  { ident: 'RJTT', type: 'large_airport', name: 'Tokyo Haneda International Airport', elevation_ft: '35', continent: 'AS', iso_country: 'JP', iso_region: 'JP-13', municipality: 'Tokyo', scheduled_service: 'yes', gps_code: 'RJTT', iata_code: 'HND', local_code: '', home_link: '', wikipedia_link: '', keywords: '' },
-  { ident: 'VHHH', type: 'large_airport', name: 'Hong Kong International Airport', elevation_ft: '28', continent: 'AS', iso_country: 'HK', iso_region: 'HK-HCW', municipality: 'Hong Kong', scheduled_service: 'yes', gps_code: 'VHHH', iata_code: 'HKG', local_code: '', home_link: '', wikipedia_link: '', keywords: '' },
-  { ident: 'OMDB', type: 'large_airport', name: 'Dubai International Airport', elevation_ft: '62', continent: 'AS', iso_country: 'AE', iso_region: 'AE-DU', municipality: 'Dubai', scheduled_service: 'yes', gps_code: 'OMDB', iata_code: 'DXB', local_code: '', home_link: '', wikipedia_link: '', keywords: '' }
-];
+
 
 // Load from cache
 const loadFromCache = (): FullAirport[] | null => {
@@ -128,72 +121,75 @@ export const parseAirportsCSV = (csvText: string): FullAirport[] => {
   return airports;
 };
 
-// Load airports data with progressive loading and caching
+// Load complete airports data with caching
 export const loadAirportsData = async (): Promise<FullAirport[]> => {
-  // Return cached data if available
-  if (airportsDatabase.length > 0) {
+  // Return cached data if available and not loading
+  if (!isLoading && airportsDatabase.length > 0) {
     return airportsDatabase;
   }
-  
-  // If already loading, return the existing promise
+
+  // If already loading, wait for the existing promise
   if (isLoading && loadingPromise) {
     return loadingPromise;
   }
-  
-  // Try to load from cache first
-  const cachedData = loadFromCache();
-  if (cachedData && cachedData.length > 0) {
-    airportsDatabase = cachedData;
-    return airportsDatabase;
-  }
-  
-  // Start loading process
+
+  // Start loading
   isLoading = true;
-  loadingPromise = loadAirportsWithFallback();
-  
+  loadingPromise = loadCompleteAirportsData();
+
   try {
-    const result = await loadingPromise;
-    return result;
+    const airports = await loadingPromise;
+    return airports;
   } finally {
     isLoading = false;
     loadingPromise = null;
   }
 };
 
-// Load airports with fallback strategies
-const loadAirportsWithFallback = async (): Promise<FullAirport[]> => {
+// Supabase Storage URL for the zip file
+const SUPABASE_ZIP_URL = 'https://suumltnbcytuleobutca.supabase.co/storage/v1/object/public/Elements/airport-codes.zip';
+
+// Load complete airports data from Supabase zip file
+const loadCompleteAirportsData = async (): Promise<FullAirport[]> => {
   try {
-    // Try to load with timeout for slow connections
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const response = await fetch('/airport-codes.csv', {
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
+    // Try to load from cache first
+    const cachedData = loadFromCache();
+    if (cachedData && cachedData.length > 0) {
+      airportsDatabase = cachedData;
+      return airportsDatabase;
+    }
+
+    // Fetch the zip file from Supabase
+    const response = await fetch(SUPABASE_ZIP_URL);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Failed to fetch airport data: ${response.status}`);
+    }
+
+    // Get the zip file as array buffer
+    const zipBuffer = await response.arrayBuffer();
+    
+    // Extract the zip file
+    const zip = new JSZip();
+    const zipContents = await zip.loadAsync(zipBuffer);
+    
+    // Find the CSV file in the zip (assuming it's named airport-codes.csv)
+    const csvFile = zipContents.file('airport-codes.csv');
+    if (!csvFile) {
+      throw new Error('CSV file not found in zip archive');
     }
     
-    const csvText = await response.text();
-    airportsDatabase = parseAirportsCSV(csvText);
+    // Get the CSV content as text
+    const csvText = await csvFile.async('text');
     
-    // Save to cache for future use
-    saveToCache(airportsDatabase);
+    // Parse the CSV
+    const airports = parseAirportsCSV(csvText);
     
-    return airportsDatabase;
+    airportsDatabase = airports;
+    saveToCache(airports);
+    return airports;
   } catch (error) {
-    console.warn('Failed to load full airports data, using essential airports:', error);
-    
-    // Fallback to essential airports for immediate functionality
-    airportsDatabase = [...essentialAirports];
-    
-    // Try to load full data in background (fire and forget)
-    loadFullDataInBackground();
-    
-    return airportsDatabase;
+    console.error('Failed to load airport data from Supabase:', error);
+    throw error; // Re-throw to handle in calling code
   }
 };
 
@@ -203,30 +199,30 @@ const loadFullDataInBackground = async (): Promise<void> => {
     // Wait a bit before trying again
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const response = await fetch('/airport-codes.csv');
+    const response = await fetch(SUPABASE_ZIP_URL);
     if (response.ok) {
-      const csvText = await response.text();
-      const fullData = parseAirportsCSV(csvText);
+      const zipBuffer = await response.arrayBuffer();
+      const zip = new JSZip();
+      const zipContents = await zip.loadAsync(zipBuffer);
+      const csvFile = zipContents.file('airport-codes.csv');
       
-      // Update the database and cache
-      airportsDatabase = fullData;
-      saveToCache(fullData);
-      
-      console.log('Full airports database loaded in background');
+      if (csvFile) {
+        const csvText = await csvFile.async('text');
+        const fullData = parseAirportsCSV(csvText);
+        
+        // Update the database and cache
+        airportsDatabase = fullData;
+        saveToCache(fullData);
+        
+        console.log('Full airports database loaded in background from Supabase');
+      }
     }
   } catch (error) {
-    console.warn('Background loading of airports data failed:', error);
+    console.warn('Background loading of airports data from Supabase failed:', error);
   }
 };
 
-// Get immediate airports (essential + any cached)
-export const getImmediateAirports = (): FullAirport[] => {
-  const cached = loadFromCache();
-  if (cached && cached.length > 0) {
-    return cached;
-  }
-  return essentialAirports;
-};
+
 
 // Search airports function
 export const searchAirports = (query: string, airports: FullAirport[]): FullAirport[] => {
