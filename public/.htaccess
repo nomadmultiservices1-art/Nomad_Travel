@@ -1,0 +1,17 @@
+# Enable compression for CSV files
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/csv
+    AddOutputFilterByType DEFLATE application/csv
+    AddOutputFilterByType DEFLATE text/plain
+</IfModule>
+
+# Set cache headers for CSV files
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/csv "access plus 1 day"
+    ExpiresByType application/csv "access plus 1 day"
+</IfModule>
+
+# Add proper MIME type for CSV
+AddType text/csv .csv
+AddType application/csv .csv
