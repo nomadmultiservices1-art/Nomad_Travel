@@ -4,9 +4,12 @@ import { Plane, Truck, MapPin, Star, ArrowRight, Users, Globe, Shield } from 'lu
 
 const Home = () => {
   const destinations = [
-    { name: 'Tokyo, Japan', image: 'https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=800', price: '$1,299' },
-    { name: 'Paris, France', image: 'https://images.pexels.com/photos/338515/pexels-photo-338515.jpeg?auto=compress&cs=tinysrgb&w=800', price: '$899' },
-    { name: 'Bali, Indonesia', image: 'https://images.pexels.com/photos/2474690/pexels-photo-2474690.jpeg?auto=compress&cs=tinysrgb&w=800', price: '$1,099' },
+    { name: 'Turkey (Ankara)', image: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?auto=format&fit=crop&w=800&q=80' },
+    { name: 'Malaysia (Kuala Lumpur)', image: 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?auto=format&fit=crop&w=800&q=80' },
+    { name: 'India (New Delhi)', image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=800&q=80' },
+    { name: 'China (Beijing)', image: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=800&q=80' },
+    { name: 'Kenya (Nairobi)', image: 'https://images.pexels.com/photos/259447/pexels-photo-259447.jpeg?auto=compress&cs=tinysrgb&w=800' },
+    { name: 'Ethiopia (Addis Ababa)', image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=800&q=80' },
   ];
 
   const features = [
@@ -129,7 +132,7 @@ const Home = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {destinations.map((destination, index) => (
               <div key={index} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow group">
                 <div className="relative h-64 overflow-hidden">
@@ -151,11 +154,10 @@ const Home = () => {
                       <Star className="h-4 w-4 text-yellow-400 fill-current" />
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-2xl font-bold text-blue-600">From {destination.price}</span>
+                  <div className="flex justify-center">
                     <Link 
                       to="/booking" 
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
                     >
                       Book Now
                     </Link>
