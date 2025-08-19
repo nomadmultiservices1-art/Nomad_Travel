@@ -8,6 +8,7 @@ import {
   sendLogisticsConfirmationEmail,
   sendLogisticsBookingNotification 
 } from '../services/emailService';
+import { diagnoseEmailService } from '../utils/emailDiagnostic';
 
 const Booking = () => {
   const [activeTab, setActiveTab] = useState('travel');
@@ -64,6 +65,9 @@ const Booking = () => {
     };
     
     loadAirports();
+    
+    // Diagnose email service configuration
+    diagnoseEmailService();
   }, []);
 
   const handleTravelInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
