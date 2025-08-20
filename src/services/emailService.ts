@@ -35,6 +35,60 @@ export interface LogisticsBookingData {
   customerPhone?: string;
 }
 
+export interface VisaApplicationData {
+  // Personal Information
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  nationality: string;
+  passportNumber: string;
+  passportExpiry: string;
+  placeOfBirth: string;
+  gender: string;
+  maritalStatus: string;
+  
+  // Travel Information
+  destinationCountry: string;
+  visaType: string;
+  purposeOfVisit: string;
+  intendedArrival: string;
+  intendedDeparture: string;
+  durationOfStay: string;
+  previousVisits: string;
+  
+  // Employment/Financial Information
+  occupation: string;
+  employer: string;
+  monthlyIncome: string;
+  financialSupport: string;
+  
+  // Accommodation
+  accommodationType: string;
+  accommodationDetails: string;
+  
+  // Additional Information
+  criminalRecord: string;
+  medicalConditions: string;
+  additionalInfo: string;
+  
+  // Contact Information
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  emergencyContact: string;
+  emergencyPhone: string;
+}
+
+export interface VisaBookingData {
+  destinationCountry: string;
+  visaType: string;
+  tentativeDeparture: string;
+  tentativeReturn: string;
+  customerEmail?: string;
+  customerName?: string;
+  customerPhone?: string;
+}
+
 // Send confirmation email to customer and admin notification
 export const sendTravelConfirmationEmail = async (data: TravelBookingData) => {
   if (!data.customerEmail) {
@@ -183,4 +237,126 @@ export const sendLogisticsConfirmationEmail = async (data: LogisticsBookingData)
 export const sendLogisticsBookingNotification = async (data: LogisticsBookingData) => {
   console.log('Note: sendLogisticsBookingNotification is now handled by sendLogisticsConfirmationEmail');
   return { status: 200, text: 'Handled by sendLogisticsConfirmationEmail' };
+};
+
+// Send visa application confirmation email to customer and admin notification
+export const sendVisaApplicationEmail = async (data: VisaApplicationData) => {
+  if (!data.customerEmail) {
+    throw new Error('Customer email is required');
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    // Fallback: simulate email sending
+    console.log('📧 [SIMULATED] Visa application confirmation email would be sent to:', data.customerEmail);
+    console.log('📧 [SIMULATED] Admin notification would be sent to:', ADMIN_EMAILS);
+    console.log('📧 [SIMULATED] Email content:', {
+      to: data.customerEmail,
+      subject: 'Visa Application Received - Nomad Travel',
+      applicantName: `${data.firstName} ${data.lastName}`,
+      destinationCountry: data.destinationCountry,
+      visaType: data.visaType,
+      purposeOfVisit: data.purposeOfVisit,
+      intendedArrival: data.intendedArrival,
+      customerName: data.customerName || 'Valued Customer',
+      customerPhone: data.customerPhone || 'Not provided'
+    });
+    
+    return {
+      status: 200,
+      text: 'Simulated email sent successfully'
+    };
+  }
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-visa-application-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        applicationData: data
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to send visa application emails: ${errorData.error || response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log('Visa application emails sent successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('Failed to send visa application emails:', error);
+    throw error;
+  }
+};
+
+// Send visa confirmation email to customer and admin notification
+export const sendVisaConfirmationEmail = async (data: VisaBookingData) => {
+  if (!data.customerEmail) {
+    throw new Error('Customer email is required');
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    // Fallback: simulate email sending
+    console.log('📧 [SIMULATED] Visa confirmation email would be sent to:', data.customerEmail);
+    console.log('📧 [SIMULATED] Admin notification would be sent to:', ADMIN_EMAILS);
+    console.log('📧 [SIMULATED] Email content:', {
+      to: data.customerEmail,
+      subject: 'Visa Application Assistance Request Confirmation - Nomad Travel',
+      destinationCountry: data.destinationCountry,
+      visaType: data.visaType,
+      tentativeDeparture: data.tentativeDeparture,
+      tentativeReturn: data.tentativeReturn || 'Not specified',
+      customerName: data.customerName || 'Valued Customer',
+      customerPhone: data.customerPhone || 'Not provided'
+    });
+    
+    return {
+      status: 200,
+      text: 'Simulated email sent successfully'
+    };
+  }
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-visa-booking-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        bookingData: {
+          destinationCountry: data.destinationCountry,
+          visaType: data.visaType,
+          tentativeDeparture: data.tentativeDeparture,
+          tentativeReturn: data.tentativeReturn,
+          customerName: data.customerName || 'Valued Customer',
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone || 'Not provided'
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to send visa emails: ${errorData.error || response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log('Visa emails sent successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('Failed to send visa emails:', error);
+    throw error;
+  }
+};
+
+// Legacy function - now handled by sendVisaConfirmationEmail
+// This function is kept for backward compatibility but delegates to the main function
+export const sendVisaBookingNotification = async (data: VisaBookingData) => {
+  console.log('Note: sendVisaBookingNotification is now handled by sendVisaConfirmationEmail');
+  return { status: 200, text: 'Handled by sendVisaConfirmationEmail' };
 };

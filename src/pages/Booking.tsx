@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Plane, Truck, Calendar, Users, MapPin, Package, Mail, Phone, User } from 'lucide-react';
+import { Plane, Truck, Calendar, Users, MapPin, Package, Mail, Phone, User, FileText } from 'lucide-react';
 import { FullAirport, loadAirportsData } from '../data/airportsData';
 import AirportAutocomplete from '../components/AirportAutocomplete';
 import { 
   sendTravelConfirmationEmail, 
   sendTravelBookingNotification,
   sendLogisticsConfirmationEmail,
-  sendLogisticsBookingNotification 
+  sendLogisticsBookingNotification,
+  sendVisaConfirmationEmail,
+  sendVisaBookingNotification
 } from '../services/emailService';
 import { diagnoseEmailService } from '../utils/emailDiagnostic';
 
@@ -18,6 +20,8 @@ const Booking = () => {
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isSubmittingTravel, setIsSubmittingTravel] = useState(false);
   const [isSubmittingLogistics, setIsSubmittingLogistics] = useState(false);
+  const [isSubmittingVisa, setIsSubmittingVisa] = useState(false);
+  const [isSubmittingVisa, setIsSubmittingVisa] = useState(false);
   const [travelForm, setTravelForm] = useState({
     origin: '',
     destination: '',
@@ -43,6 +47,15 @@ const Booking = () => {
     customerName: '',
     customerEmail: '',
     customerPhone: ''
+  });
+  const [visaForm, setVisaForm] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    destinationCountry: '',
+    visaType: '',
+    tentativeDeparture: '',
+    tentativeReturn: ''
   });
 
   // Load complete airports data on component mount
@@ -80,6 +93,13 @@ const Booking = () => {
   const handleLogisticsInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setLogisticsForm({
       ...logisticsForm,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleVisaInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setVisaForm({
+      ...visaForm,
       [e.target.name]: e.target.value
     });
   };
@@ -158,6 +178,39 @@ const Booking = () => {
     }
   };
 
+  const handleVisaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingVisa(true);
+    
+    try {
+      // Send confirmation email to customer
+      if (visaForm.customerEmail) {
+        await sendVisaConfirmationEmail(visaForm);
+      }
+      
+      // Send notification to admins
+      await sendVisaBookingNotification(visaForm);
+      
+      alert('Thank you for your visa application request! We\'ve sent you a confirmation email and our team will contact you within 24 hours to guide you through the visa application process.');
+      
+      // Reset form
+      setVisaForm({
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        destinationCountry: '',
+        visaType: '',
+        tentativeDeparture: '',
+        tentativeReturn: ''
+      });
+    } catch (error) {
+      console.error('Error submitting visa application:', error);
+      alert('There was an error submitting your visa application request. Please try again or contact us directly.');
+    } finally {
+      setIsSubmittingVisa(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -197,6 +250,17 @@ const Booking = () => {
               >
                 <Truck className="h-5 w-5 mr-2" />
                 Logistics Quote
+              </button>
+              <button
+                onClick={() => setActiveTab('visa')}
+                className={`flex items-center px-6 py-3 rounded-lg font-semibold transition-colors ml-2 ${
+                  activeTab === 'visa' 
+                    ? 'bg-purple-600 text-white shadow-lg' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <FileText className="h-5 w-5 mr-2" />
+                Visa Assistance
               </button>
             </div>
           </div>
